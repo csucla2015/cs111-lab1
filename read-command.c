@@ -19,6 +19,7 @@ struct command_stream {
 	char* current_token;
 	char next_char;
         int line_number;
+	command_t next_command;
 };
 
 /* Enumerated type to define type of token */
@@ -89,8 +90,7 @@ char* get_next_token(command_stream_t stream)
         token[0] = '|';
         token[1] = '|';
 	token_size++;
-        next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
-	printf("And Here");
+        next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);	
 	}
 
 	else token[0] = '|';
@@ -228,6 +228,43 @@ token_class next_token_type(char* token)
 	return type;
 }
 
+
+command_t make_new_command()
+{
+	command_t com = checked_malloc(sizeof(struct command));
+	com->type = SIMPLE_COMMAND;
+	com->status = -1;
+	char* input = NULL;
+	char* output = NULL;
+	return com;
+}
+
+void prase_simple_command()
+{
+	char* token = get_next_token(stream);
+	command_t c = make_new_command();
+	int word_num = 0;
+
+        while(next_token_type(token) == WORD)
+        {
+                c->u.word[word_num] = token;
+		word_num++;
+		token = get_next_token(stream);
+        }
+
+	if(next_token_type(token) == LEFT_ANGLE)
+	{
+		c->input = get_next_token(stream); //Add check for word after redirect
+	}
+	
+	if(next_token_type(token) == )
+
+} 
+
+	
+
+
+
 command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
 		     void *get_next_byte_argument)
@@ -238,20 +275,31 @@ make_command_stream (int (*get_next_byte) (void *),
   command_stream_t stream = checked_malloc(sizeof (struct command_stream) );
   stream->get_next_byte = get_next_byte; stream->next_char = ~(3)+1;
   stream->get_next_byte_argument = get_next_byte_argument;
-  get_next_token(stream);
-  get_next_token(stream);
-  //get_next_token(stream); 
-  //error (1, 0, "command reading not yet implemented");
-
   while(stream->next_char != EOF)
-	get_next_token(stream);
-  return 0;
+  {
+	char* token = get_next_token(stream);
+	if(isWord(token))
+	{
+		command_t c = make_new_command();
+		c->u.word[0] = token;
+		stream->next_command = c;
+	}
+
+	
+  
+  }
+  
+  return stream;
+
 }
+
+
+
 
 command_t
 read_command_stream (command_stream_t s)
 {
   /* FIXME: Replace this with your implementation too.  */
-  error (1, 0, "command reading not yet implemented");
-  return 0;
+//  error (1, 0, "command reading not yet implemented");
+  return s->next_command;
 }
