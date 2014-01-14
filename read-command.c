@@ -33,6 +33,7 @@ typedef enum {
 	LEFT_ROUND,\
 	RIGHT_ROUND,\
 	NEWLINE,\
+	WHITESPACE,\
 	INVALID,\
 
 } token_class;
@@ -42,6 +43,7 @@ typedef enum {
  */
 char* get_next_token(command_stream_t stream)
 {
+//TODO refactor alloc later
   char* token = checked_malloc(10 * sizeof(char));
   int token_size = 0;
   int max_token_size = 10;
@@ -50,21 +52,51 @@ char* get_next_token(command_stream_t stream)
 	next_char =  (*stream->get_next_byte)(stream->get_next_byte_argument);
   else next_char = stream->next_char;
 
-  //Ignore spaces and tabs
-  while(next_char == ' ' || next_char == '\t')
-	{
+  
+   while(next_char == ' ' || next_char == '\t')
+	{	
 		next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
-	
 	}
   
-   if(next_char == '\n')
+   if(next_char == '\n' || next_char == '(' || next_char == ')' || next_char == ';' || next_char == '<' || next_char == '>')
   {
-	token[0] = '\n';
+	token[0] = next_char;
+        
+	if(next_char == '\n')
 	stream->line_number++;
+
 	next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
 	goto ret;	
   }
   
+  if(next_char == '&')
+  {
+	next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
+	if(next_char == '&'){
+	token[0] = '&';
+	token[1] = '&';
+	token_size++;
+	next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
+         }
+	goto ret;
+ }
+
+   if(next_char == '|')
+  {
+        next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
+        
+	if(next_char == '|'){
+        token[0] = '|';
+        token[1] = '|';
+	token_size++;
+        next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
+	printf("And Here");
+	}
+
+	else token[0] = '|';
+        goto ret;
+ }
+
   if(next_char == '#')
   {
 	while(next_char != '\n')
@@ -74,11 +106,12 @@ char* get_next_token(command_stream_t stream)
   }
  
   
-  while(next_char != EOF && next_char != ' ' && next_char != '\n' && next_char != '\t')
+  while(next_char != EOF && next_char != ' ' && next_char != '\n' && next_char != '\t' && next_char != ';' && next_char != ')' && next_char != '>' && next_char != '<' && next_char != '|' && next_char != '&')
 	{	
 		if(token_size == max_token_size){
-			token = checked_realloc(token,10*sizeof(char));
-			max_token_size += 10;		
+			max_token_size += 10;
+			token = checked_realloc(token,max_token_size*sizeof(char));
+					
 		}
 		token[token_size] = next_char;
 		next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);	
@@ -128,6 +161,12 @@ token_class next_token_type(char* token)
 	if(isWord(token) == 0)
 	{
 		type = WORD;
+		return type;
+	}
+
+	if(strcmp(token,"\t") == 0 || strcmp(token," ") == 0)
+	{
+		type = WHITESPACE;
 		return type;
 	}
 
@@ -188,9 +227,6 @@ token_class next_token_type(char* token)
 	type = INVALID;
 	return type;
 }
-
-
-
 
 command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
