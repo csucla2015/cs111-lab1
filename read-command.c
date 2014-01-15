@@ -35,6 +35,7 @@ typedef enum {
 	RIGHT_ROUND,\
 	NEWLINE,\
 	WHITESPACE,\
+	END_OF_FILE,\
 	INVALID,\
 
 } token_class;
@@ -53,11 +54,18 @@ char* get_next_token(command_stream_t stream)
 	next_char =  (*stream->get_next_byte)(stream->get_next_byte_argument);
   else next_char = stream->next_char;
 
-  
+
    while(next_char == ' ' || next_char == '\t')
 	{	
 		next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
 	}
+
+    if(next_char == EOF)
+    {
+        char * a = checked_malloc(sizeof(char));
+        a[0] = EOF;
+        return a;
+    }
   
    if(next_char == '\n' || next_char == '(' || next_char == ')' || next_char == ';' || next_char == '<' || next_char == '>')
   {
@@ -125,7 +133,7 @@ char* get_next_token(command_stream_t stream)
   stream->next_char = next_char;
   stream->current_token = token;
   
-  printf("The next token is %s\n", token);
+  //printf("The next token is %s\n", token);
   return token;
 }  
 
@@ -139,7 +147,6 @@ int isWord(char* token)
 	while(token[index] != '\0')
 	{	
 		char curr = token[index];
-		putchar(curr);
 		if((curr >= '0' && curr <= '9') || (curr >= 'a' && curr <= 'z') || (curr >= 'A' && curr <='Z') || curr == '!' || curr == '%' || curr == '+' || curr == ',' || curr == '-' || curr == '.' || curr == '/' || curr == ':' || curr == '@' || curr == '^' || curr == '_')
 	;	
 
@@ -158,6 +165,13 @@ int isWord(char* token)
 token_class next_token_type(char* token)
 {
 	token_class type;
+
+	if(token[0] == EOF)
+	{
+		type = END_OF_FILE;
+		return type;
+	}
+
 	if(isWord(token) == 0)
 	{
 		type = WORD;
@@ -223,11 +237,21 @@ token_class next_token_type(char* token)
 		type = OR;
 		return type;
 	}
-
+	
 	type = INVALID;
 	return type;
 }
 
+char* skip_newline(command_stream_t stream)
+{
+	char* token = get_next_token(stream);
+	while(next_token_type(token) == NEWLINE)
+	{
+		token = get_next_token(stream);
+	}
+	
+	return token;
+}
 
 command_t make_new_command()
 {
@@ -239,26 +263,58 @@ command_t make_new_command()
 	return com;
 }
 
-void prase_simple_command()
+command_t parse_simple_command(command_stream_t stream)
 {
-	char* token = get_next_token(stream);
-	command_t c = make_new_command();
-	int word_num = 0;
+	char* token = skip_newline(stream);
+  	
+	if(next_token_type(token) == END_OF_FILE)
+		return NULL;
 
+
+	command_t c = make_new_command();
+	int word_num = 1;
+	c->u.word = checked_malloc(sizeof(char *));
+	int flag =0;
         while(next_token_type(token) == WORD)
         {
-                c->u.word[word_num] = token;
+//	printf("here\n");
+                c->u.word[word_num-1] = token;
 		word_num++;
+		c->u.word = checked_realloc(c->u.word,word_num*sizeof(char *));
 		token = get_next_token(stream);
-        }
-
-	if(next_token_type(token) == LEFT_ANGLE)
-	{
-		c->input = get_next_token(stream); //Add check for word after redirect
+        	flag = 1;
 	}
 	
-	if(next_token_type(token) == )
+	if(flag == 1) c->u.word[word_num] = NULL;
+	
+	
+	if(next_token_type(token) == LEFT_ANGLE)
+	{
+		token = get_next_token(stream);
+		if(next_token_type(token) == WORD)
+		{
+			c->input = token;
+			token = get_next_token(stream);
+		} 
 
+		else error(1,0,"%d: Unexpected token after \'<\'",stream->line_number);
+	}
+
+	
+	if(next_token_type(token) == RIGHT_ANGLE)
+	{
+		token = get_next_token(stream);
+                if(next_token_type(token) == WORD)
+                {
+                        c->output = token; //Get next char
+                }
+
+                else error(1,0,"%d: Unexpected token after \'>\'",stream->line_number);
+        }
+	
+	
+
+	return c;
 } 
 
 	
@@ -274,21 +330,7 @@ make_command_stream (int (*get_next_byte) (void *),
      You can also use external functions defined in the GNU C Library.  */
   command_stream_t stream = checked_malloc(sizeof (struct command_stream) );
   stream->get_next_byte = get_next_byte; stream->next_char = ~(3)+1;
-  stream->get_next_byte_argument = get_next_byte_argument;
-  while(stream->next_char != EOF)
-  {
-	char* token = get_next_token(stream);
-	if(isWord(token))
-	{
-		command_t c = make_new_command();
-		c->u.word[0] = token;
-		stream->next_command = c;
-	}
-
-	
-  
-  }
-  
+  stream->get_next_byte_argument = get_next_byte_argument;  
   return stream;
 
 }
@@ -301,5 +343,5 @@ read_command_stream (command_stream_t s)
 {
   /* FIXME: Replace this with your implementation too.  */
 //  error (1, 0, "command reading not yet implemented");
-  return s->next_command;
+  return parse_simple_command(s);
 }
