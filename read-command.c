@@ -43,7 +43,7 @@ typedef enum {
 /*Get next token. i.e. set of character separated by whitespace. Newline is treated 
  * as a special token and is returned. Comments are ignored and the next token after a comment is returned
  */
-char* get_next_token(command_stream_t stream)
+void get_next_token(command_stream_t stream)
 {
 //TODO refactor alloc later
   char* token = checked_malloc(10 * sizeof(char));
@@ -64,7 +64,7 @@ char* get_next_token(command_stream_t stream)
     {
         char * a = checked_malloc(sizeof(char));
         a[0] = EOF;
-        return a;
+        stream->current_token = a;
     }
   
    if(next_char == '\n' || next_char == '(' || next_char == ')' || next_char == ';' || next_char == '<' || next_char == '>')
@@ -134,7 +134,7 @@ char* get_next_token(command_stream_t stream)
   stream->current_token = token;
   
   //printf("The next token is %s\n", token);
-  return token;
+  //return token;
 }  
 
 
@@ -242,21 +242,22 @@ token_class next_token_type(char* token)
 	return type;
 }
 
-char* skip_newline(command_stream_t stream)
+void skip_newline(command_stream_t stream)
 {
-	char* token = get_next_token(stream);
-	while(next_token_type(token) == NEWLINE)
+	get_next_token(stream);	
+	while(next_token_type(stream->current_token) == NEWLINE)
 	{
-		token = get_next_token(stream);
+		get_next_token(stream);
+
 	}
 	
-	return token;
+	
 }
 
-command_t make_new_command()
+command_t make_new_command(token_class type)
 {
 	command_t com = checked_malloc(sizeof(struct command));
-	com->type = SIMPLE_COMMAND;
+	com->type = type;
 	com->status = -1;
 	char* input = NULL;
 	char* output = NULL;
@@ -265,48 +266,49 @@ command_t make_new_command()
 
 command_t parse_simple_command(command_stream_t stream)
 {
-	char* token = skip_newline(stream);
+
+	skip_newline(stream);
   	
-	if(next_token_type(token) == END_OF_FILE)
+	if(next_token_type(stream->current_token) == END_OF_FILE)
 		return NULL;
 
 
-	command_t c = make_new_command();
+	command_t c = make_new_command(SIMPLE_COMMAND);
 	int word_num = 1;
 	c->u.word = checked_malloc(sizeof(char *));
 	int flag =0;
-        while(next_token_type(token) == WORD)
+        while(next_token_type(stream->current_token) == WORD)
         {
-//	printf("here\n");
-                c->u.word[word_num-1] = token;
+	printf("here\n"); get_next_token(stream);
+                c->u.word[word_num-1] = stream->current_token;
 		word_num++;
 		c->u.word = checked_realloc(c->u.word,word_num*sizeof(char *));
-		token = get_next_token(stream);
+	`	get_next_token(stream);
         	flag = 1;
 	}
 	
 	if(flag == 1) c->u.word[word_num] = NULL;
 	
 	
-	if(next_token_type(token) == LEFT_ANGLE)
+	if(next_token_type(stream->current_token) == LEFT_ANGLE)
 	{
-		token = get_next_token(stream);
-		if(next_token_type(token) == WORD)
+		get_next_token(stream);
+		if(next_token_type(stream->current_token) == WORD)
 		{
-			c->input = token;
-			token = get_next_token(stream);
+			c->input = stream->current_token;
+			get_next_token(stream);
 		} 
 
 		else error(1,0,"%d: Unexpected token after \'<\'",stream->line_number);
 	}
 
 	
-	if(next_token_type(token) == RIGHT_ANGLE)
+	if(next_token_type(stream->current_token) == RIGHT_ANGLE)
 	{
-		token = get_next_token(stream);
-                if(next_token_type(token) == WORD)
+		get_next_token(stream);
+                if(next_token_type(stream->current_token) == WORD)
                 {
-                        c->output = token; //Get next char
+                        c->output = stream->current_token; //Get next char
                 }
 
                 else error(1,0,"%d: Unexpected token after \'>\'",stream->line_number);
@@ -318,7 +320,26 @@ command_t parse_simple_command(command_stream_t stream)
 } 
 
 	
+command_t parse_pipe_command(command_stream_t stream)
+{
+	command_t left = parse_simple_command(stream);
+	command_t right = NULL;
+	get_next_token(stream);
+	if(next_token_type(stream->current_token) == PIPE)
+	{
+		command_t pipe = make_new_command(PIPE_COMMAND);
+		right = parse_simple_command(stream);
+		pipe->u.command[0] = left;
+		pipe->u.command[1] = right;
+		printf("Here");
+		return pipe;	
+	}
 
+	return left;
+		
+	
+
+}					
 
 
 command_stream_t
@@ -330,7 +351,8 @@ make_command_stream (int (*get_next_byte) (void *),
      You can also use external functions defined in the GNU C Library.  */
   command_stream_t stream = checked_malloc(sizeof (struct command_stream) );
   stream->get_next_byte = get_next_byte; stream->next_char = ~(3)+1;
-  stream->get_next_byte_argument = get_next_byte_argument;  
+  stream->get_next_byte_argument = get_next_byte_argument; 
+ 
   return stream;
 
 }
@@ -342,6 +364,6 @@ command_t
 read_command_stream (command_stream_t s)
 {
   /* FIXME: Replace this with your implementation too.  */
-//  error (1, 0, "command reading not yet implemented");
+  //error (1, 0, "command reading not yet implemented");
   return parse_simple_command(s);
 }

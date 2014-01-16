@@ -1,2 +1,2 @@
-echo hello < test > test2
-echo hello1
+echo hello < test > test
+echo hello | echo
