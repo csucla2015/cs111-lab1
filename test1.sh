@@ -1,2 +1,3 @@
-echo hello < test > test
-echo hello | echo
+echo hello < test
+echo hello | wc
+echo && echo

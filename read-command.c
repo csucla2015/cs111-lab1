@@ -65,6 +65,7 @@ void get_next_token(command_stream_t stream)
         char * a = checked_malloc(sizeof(char));
         a[0] = EOF;
         stream->current_token = a;
+	return;
     }
   
    if(next_char == '\n' || next_char == '(' || next_char == ')' || next_char == ';' || next_char == '<' || next_char == '>')
@@ -244,7 +245,7 @@ token_class next_token_type(char* token)
 
 void skip_newline(command_stream_t stream)
 {
-	get_next_token(stream);	
+	//if(stream->current_token) get_next_token(stream);	
 	while(next_token_type(stream->current_token) == NEWLINE)
 	{
 		get_next_token(stream);
@@ -268,7 +269,7 @@ command_t parse_simple_command(command_stream_t stream)
 {
 
 	skip_newline(stream);
-  	
+
 	if(next_token_type(stream->current_token) == END_OF_FILE)
 		return NULL;
 
@@ -279,11 +280,11 @@ command_t parse_simple_command(command_stream_t stream)
 	int flag =0;
         while(next_token_type(stream->current_token) == WORD)
         {
-	printf("here\n"); get_next_token(stream);
+	//printf("here\n"); 
                 c->u.word[word_num-1] = stream->current_token;
 		word_num++;
 		c->u.word = checked_realloc(c->u.word,word_num*sizeof(char *));
-	`	get_next_token(stream);
+		get_next_token(stream);
         	flag = 1;
 	}
 	
@@ -309,6 +310,7 @@ command_t parse_simple_command(command_stream_t stream)
                 if(next_token_type(stream->current_token) == WORD)
                 {
                         c->output = stream->current_token; //Get next char
+			get_next_token(stream);
                 }
 
                 else error(1,0,"%d: Unexpected token after \'>\'",stream->line_number);
@@ -324,23 +326,73 @@ command_t parse_pipe_command(command_stream_t stream)
 {
 	command_t left = parse_simple_command(stream);
 	command_t right = NULL;
-	get_next_token(stream);
-	if(next_token_type(stream->current_token) == PIPE)
+	command_t pipe = NULL;
+	while(next_token_type(stream->current_token) == PIPE)
 	{
-		command_t pipe = make_new_command(PIPE_COMMAND);
+		pipe = make_new_command(PIPE_COMMAND);
+		get_next_token(stream);
 		right = parse_simple_command(stream);
 		pipe->u.command[0] = left;
 		pipe->u.command[1] = right;
-		printf("Here");
-		return pipe;	
+		left = pipe;	
 	}
 
 	return left;
 		
 	
 
-}					
+}	
 
+command_t parse_and_or_command(command_stream_t stream)
+{
+	command_t left = parse_pipe_command(stream);
+	command_t right = NULL;
+	while(next_token_type(stream->current_token) == AND || next_token_type(stream->current_token) == OR)
+	{
+		if(next_token_type(stream->current_token) == AND)
+		{
+			command_t and = make_new_command(AND_COMMAND);
+			get_next_token(stream);
+			right = parse_pipe_command(stream);
+			and->u.command[0] = left;
+			and->u.command[1] = right;
+			left = and;
+		}
+
+		if(next_token_type(stream->current_token) == OR)
+		{
+			command_t or = make_new_command(OR_COMMAND);
+                	get_next_token(stream);
+                	right = parse_pipe_command(stream);
+                	or->u.command[0] = left;
+                	or->u.command[1] = right;
+                	left = or;
+		}
+
+		 
+	}
+
+	return left;				
+
+}
+
+
+/*command_t parse_complete_command(command_stream_t stream)
+{
+	command_t left = parse_pipe_command(stream);
+	command_t right = NULL;
+	while(next_token_type(stream->current_token) == SEMICOLON)
+	{
+		command_t sequence = make_new_command(SEQUENCE_COMMAND);
+		get_next_token(stream);
+		right = parse_and_or_command(stream);
+		sequence->u.command[0] = left;
+		sequence->u.command[1] = right;
+		left = sequence;
+	}
+
+	return left;
+}*/
 
 command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
@@ -352,7 +404,7 @@ make_command_stream (int (*get_next_byte) (void *),
   command_stream_t stream = checked_malloc(sizeof (struct command_stream) );
   stream->get_next_byte = get_next_byte; stream->next_char = ~(3)+1;
   stream->get_next_byte_argument = get_next_byte_argument; 
- 
+  get_next_token(stream); 
   return stream;
 
 }
@@ -365,5 +417,5 @@ read_command_stream (command_stream_t s)
 {
   /* FIXME: Replace this with your implementation too.  */
   //error (1, 0, "command reading not yet implemented");
-  return parse_simple_command(s);
+  return parse_and_or_command(s);
 }
