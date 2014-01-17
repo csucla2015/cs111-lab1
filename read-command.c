@@ -289,7 +289,7 @@ command_t parse_simple_command(command_stream_t stream)
 	}
 	
 	if(flag == 1) c->u.word[word_num] = NULL;
-	
+        else error(1,0,"%d: Incorrect syntax.", stream->line_number);	
 	
 	if(next_token_type(stream->current_token) == LEFT_ANGLE)
 	{
@@ -371,17 +371,17 @@ command_t parse_and_or_command(command_stream_t stream)
 
 		 
 	}
-
+	get_next_token(stream);
 	return left;				
 
 }
 
 
-/*command_t parse_complete_command(command_stream_t stream)
+command_t parse_complete_command(command_stream_t stream)
 {
-	command_t left = parse_pipe_command(stream);
+	command_t left = parse_and_or_command(stream);
 	command_t right = NULL;
-	while(next_token_type(stream->current_token) == SEMICOLON)
+	while(next_token_type(stream->current_token) == SEMICOLON || next_token_type(stream->current_token) == NEWLINE)
 	{
 		command_t sequence = make_new_command(SEQUENCE_COMMAND);
 		get_next_token(stream);
@@ -390,9 +390,36 @@ command_t parse_and_or_command(command_stream_t stream)
 		sequence->u.command[1] = right;
 		left = sequence;
 	}
-
+//	get_next_token(stream);
 	return left;
-}*/
+}
+
+command_t parse_subshell_command(command_stream_t stream)
+{
+	command_t subshell = NULL;
+
+	if(next_token_type(stream->current_token) == LEFT_ROUND)
+	{printf("Here");
+		subshell = make_new_command(SUBSHELL_COMMAND);
+		get_next_token(stream);
+		subshell->u.subshell_command = parse_complete_command(stream);
+	
+        }
+
+	if(next_token_type(stream->current_token) == RIGHT_ROUND)
+	{
+		return subshell;
+	}
+
+	//else error(1,0,"%d: No closing parenthesis found", stream->line_number);
+
+	
+
+	return parse_complete_command(stream);
+
+	//return NULL;
+	
+}
 
 command_stream_t
 make_command_stream (int (*get_next_byte) (void *),
@@ -403,7 +430,8 @@ make_command_stream (int (*get_next_byte) (void *),
      You can also use external functions defined in the GNU C Library.  */
   command_stream_t stream = checked_malloc(sizeof (struct command_stream) );
   stream->get_next_byte = get_next_byte; stream->next_char = ~(3)+1;
-  stream->get_next_byte_argument = get_next_byte_argument; 
+  stream->get_next_byte_argument = get_next_byte_argument;
+  stream->line_number = 1; 
   get_next_token(stream); 
   return stream;
 
@@ -417,5 +445,5 @@ read_command_stream (command_stream_t s)
 {
   /* FIXME: Replace this with your implementation too.  */
   //error (1, 0, "command reading not yet implemented");
-  return parse_and_or_command(s);
+  return parse_subshell_command(s);
 }

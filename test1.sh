@@ -1,3 +1,4 @@
 echo hello < test
-echo hello | wc
-echo && echo
+echo hello | wc && world;echo
+echo && hello
+
