@@ -134,7 +134,7 @@ void get_next_token(command_stream_t stream)
   stream->next_char = next_char;
   stream->current_token = token;
   
-  //printf("The next token is %s\n", token);
+  ////printf("The next token is %s\n", token);
   //return token;
 }  
 
@@ -280,11 +280,11 @@ command_t parse_simple_command(command_stream_t stream)
 	int flag =0;
         while(next_token_type(stream->current_token) == WORD)
         {
-	//printf("here\n"); 
+	////printf("here\n"); 
                 c->u.word[word_num-1] = stream->current_token;
 		word_num++;
 		c->u.word = checked_realloc(c->u.word,word_num*sizeof(char *));
-		get_next_token(stream);
+		get_next_token(stream); 
         	flag = 1;
 	}
 	
@@ -317,7 +317,7 @@ command_t parse_simple_command(command_stream_t stream)
         }
 	
 	
-
+	//printf("%s is the last token\n",stream->current_token);
 	return c;
 } 
 
@@ -371,7 +371,7 @@ command_t parse_and_or_command(command_stream_t stream)
 
 		 
 	}
-	get_next_token(stream);
+	//get_next_token(stream);
 	return left;				
 
 }
@@ -381,40 +381,75 @@ command_t parse_complete_command(command_stream_t stream)
 {
 	command_t left = parse_and_or_command(stream);
 	command_t right = NULL;
-	while(next_token_type(stream->current_token) == SEMICOLON || next_token_type(stream->current_token) == NEWLINE)
+	while(next_token_type(stream->current_token) == SEMICOLON)// || next_token_type(stream->current_token) == NEWLINE)
 	{
 		command_t sequence = make_new_command(SEQUENCE_COMMAND);
 		get_next_token(stream);
 		right = parse_and_or_command(stream);
+		if(right != NULL) {
 		sequence->u.command[0] = left;
 		sequence->u.command[1] = right;
 		left = sequence;
+	} else break;
 	}
-//	get_next_token(stream);
+	//get_next_token(stream);
 	return left;
 }
 
 command_t parse_subshell_command(command_stream_t stream)
 {
 	command_t subshell = NULL;
-
+	//printf("%s\n",stream->current_token);
 	if(next_token_type(stream->current_token) == LEFT_ROUND)
-	{printf("Here");
+	{//printf("Left\n");
 		subshell = make_new_command(SUBSHELL_COMMAND);
 		get_next_token(stream);
+		//printf("%s\n",stream->current_token);	
 		subshell->u.subshell_command = parse_complete_command(stream);
+		//printf("%s\n",stream->current_token);
 	
         }
-
+	//printf(stream->current_token);
 	if(next_token_type(stream->current_token) == RIGHT_ROUND)
-	{
-		return subshell;
-	}
+	{//printf("Right");
+		get_next_token(stream);
+		
+	
 
 	//else error(1,0,"%d: No closing parenthesis found", stream->line_number);
 
-	
+	if(next_token_type(stream->current_token) == LEFT_ANGLE)
+        {
+                get_next_token(stream);
+                if(next_token_type(stream->current_token) == WORD)
+                {
+                        subshell->input = stream->current_token;
+                        get_next_token(stream);
+                }
 
+                else error(1,0,"%d: Unexpected token after \'<\'",stream->line_number);
+        }
+
+
+        if(next_token_type(stream->current_token) == RIGHT_ANGLE)
+        {
+                get_next_token(stream);
+                if(next_token_type(stream->current_token) == WORD)
+                {
+                        subshell->output = stream->current_token; //Get next char
+                        get_next_token(stream);
+                }
+
+                else error(1,0,"%d: Unexpected token after \'>\'",stream->line_number);
+        }
+	
+	
+	
+	
+	return subshell;
+
+
+	}
 	return parse_complete_command(stream);
 
 	//return NULL;
