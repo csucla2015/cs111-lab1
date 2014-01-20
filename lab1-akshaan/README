@@ -1,4 +1,8 @@
-This is a skeleton for CS 111 Lab 1.
+CS 111 Lab 1A - Shell Script Parsing 
 
-Replace this README file with notes on your implementation.
-Mentions any special features or limitations.
+Name: Akshaan Kakar    Name: Meet Bhagdev
+UId: 804029538         UId: 104079094
+
+Completed the implementation the parsing of shell scripts within the bounds of the POSIX shell grammar given to us. Tokens are parsed and returned with the tabs and whitespace stripped. Newlines are returned as a special token. Words, newlines and the eight special tokens are recongnized using an enumerated type. As each special token is encountered, the commands on either side of the token are parsed and added to the corresponding structure. In this way, every complete command is parsed into a tree and the root of this tree is returned by the read_command_stream function. 
+
+ 
