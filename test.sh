@@ -1,1 +1,1 @@
-echo hello || echo hi && echo three && echo yes && echo no && echo slut
+(echo hello; echo hi) || (echo hello2; echo hi2)

@@ -97,14 +97,16 @@ void execute_pipe_command(command_t command)
 	{
 		dup2(pipe_array[1],1);
 		close(pipe_array[0]);	
-		execvp(command->u.command[0]->u.word[0],command->u.command[0]->u.word);
+		//execvp(command->u.command[0]->u.word[0],command->u.command[0]->u.word);
+		execute_wrapper(command->u.command[0]);
 	}
 
 	else if(pid > 0){
 		
 			dup2(pipe_array[0],0);
 			close(pipe_array[1]);
-			execvp(command->u.command[1]->u.word[0],command->u.command[1]->u.word);
+			//execvp(command->u.command[1]->u.word[0],command->u.command[1]->u.word);
+			execute_wrapper(command->u.command[1]);
 		
 		 //waitpid(pid,&command->u.command[1]->status,0);
 	    }
@@ -117,6 +119,45 @@ void execute_pipe_command(command_t command)
 
 	
  }
+
+
+void execute_subshell_command(command_t command)
+{
+
+pid_t pid;
+                                                                                                      
+if((pid = fork()) < 0)
+	error(1,0,"Could not create new process");
+                                                                                                      
+if (pid == 0) {
+                                                                                                      
+	if(command->input != NULL){
+		int fd0 = open(command->input,O_RDONLY,0644); //Open Input File
+		if(fd0 < 0)                                    	
+                	error(1,0,"Input file does not exist");
+		dup2(fd0,0);  //Copy File descriptor to STDIN
+		close(fd0);
+	}
+                                                                                                      
+                                                                                                      
+	if(command->output != NULL){
+		int fd1 = open(command->output,O_WRONLY | O_CREAT | O_TRUNC,0644); //Open Output File
+		if(fd1 < 0)
+                	error(1,0,"Could not write to output file");
+                        dup2(fd1,1);  //Copy File descriptor to STDOUT
+			close(fd1);
+	}
+                                                                                                      
+                                                                                                      
+	execute_wrapper(command->u.subshell_command);
+ 		//error(1,0,"Command execution failed");
+                                                                                                      
+}	
+                                                                                                      
+else waitpid(pid,&command->status,0);
+
+		
+}
 
 void execute_wrapper(command_t command);
 void execute_sequence_command(command_t command)
@@ -144,7 +185,8 @@ void execute_wrapper(command_t c)
                execute_pipe_command(c);
                break;
                case (SUBSHELL_COMMAND):
-        	return;	
+        	execute_subshell_command(c);
+		break;
 	}
 }
 
