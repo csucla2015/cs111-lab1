@@ -17,6 +17,8 @@ command_status (command_t c)
   return c->status;
 }
 
+void execute_wrapper(command_t c);
+
 void execute_simple_command(command_t command)
 {
 	pid_t pid;
@@ -62,21 +64,21 @@ void execute_and_or_command(command_t command)
 
 
 	if(command->type == AND_COMMAND){
-		execute_simple_command(command->u.command[0]);
+		execute_wrapper(command->u.command[0]);
 		command->status = command->u.command[0]->status;
 		if(command_status(command->u.command[0]) == 0){
-			execute_simple_command(command->u.command[1]);
+			execute_wrapper(command->u.command[1]);
 			command->status = command->u.command[1]->status;
 		}
 
 	}
 
 	if(command->type == OR_COMMAND){
-		execute_simple_command(command->u.command[0]);
+		execute_wrapper(command->u.command[0]);
 		command->status = command->u.command[0]->status;
 		//printf("%d\n",command->status);
 		if(command_status(command->u.command[0]) != 0){
-			execute_simple_command(command->u.command[1]);
+			execute_wrapper(command->u.command[1]);
 			command->status = command->u.command[1]->status;
 		}
 	}	
@@ -114,7 +116,38 @@ void execute_pipe_command(command_t command)
 
 
 	
- }		
+ }
+
+void execute_wrapper(command_t command);
+void execute_sequence_command(command_t command)
+{
+	execute_wrapper(command->u.command[0]);
+	execute_wrapper(command->u.command[1]);	
+}
+
+
+void execute_wrapper(command_t c)
+{
+	 switch(c->type){
+                                          
+               case (SIMPLE_COMMAND):
+               execute_simple_command(c);
+               break;
+               case (AND_COMMAND):
+               case (OR_COMMAND):
+               execute_and_or_command(c);
+               break;
+               case (SEQUENCE_COMMAND):
+		execute_sequence_command(c);
+		break;
+               case (PIPE_COMMAND):
+               execute_pipe_command(c);
+               break;
+               case (SUBSHELL_COMMAND):
+        	return;	
+	}
+}
+
 
 void
 execute_command (command_t c, int time_travel)
@@ -123,23 +156,7 @@ execute_command (command_t c, int time_travel)
      add auxiliary functions and otherwise modify the source code.
      You can also use external functions defined in the GNU C Library.  */
   //error (1, 0, "command execution not yet implemented");
- 
-  switch(c->type){
 
-	case (SIMPLE_COMMAND):
-	execute_simple_command(c);
-	break;
-	case (AND_COMMAND):
-	case (OR_COMMAND):
-	execute_and_or_command(c);
-	break;
-	case (SEQUENCE_COMMAND):
-	case (PIPE_COMMAND):
-	execute_pipe_command(c);
-	break;
-	case (SUBSHELL_COMMAND):
- 	return;	
-  }
-
+  execute_wrapper(c);
 
 }
