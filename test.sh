@@ -1,1 +1,2 @@
-(echo hello; echo hi) || (echo hello2; echo hi2)
+(echo hello) || (echo hi) && (echo no) && (echo hi)
+
