@@ -55,6 +55,16 @@ void get_next_token(command_stream_t stream)
   else next_char = stream->next_char;
 
 
+if(next_char == '#')
+{                                                                                                                
+      while(next_char != '\n')
+      	next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
+
+next_char = (*stream->get_next_byte)(stream->get_next_byte_argument); // Skip to next char after comment newline
+if(next_char == EOF) token[0] = EOF;
+                                                                                                                 
+}                                                                                                                
+
    while(next_char == ' ' || next_char == '\t')
 	{	
 		next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
@@ -109,13 +119,15 @@ void get_next_token(command_stream_t stream)
         goto ret;
  }
 
-  if(next_char == '#')
-  {
-	while(next_char != '\n')
-		next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
   
-  next_char = (*stream->get_next_byte)(stream->get_next_byte_argument); // Skip to next char after comment newline
-  }
+  
+  
+  
+  
+  
+  
+
+  
  
   
   while(next_char != EOF && next_char != ' ' && next_char != '\n' && next_char != '\t' && next_char != ';' && next_char != ')' && next_char != '>' && next_char != '<' && next_char != '|' && next_char != '&')
