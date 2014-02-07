@@ -293,9 +293,9 @@ command_t parse_simple_command(command_stream_t stream)
 	
 	if(flag == 1) c->u.word[word_num] = NULL;
 
-        else if (next_token_type(stream->current_token) == RIGHT_ROUND)
+        else if (next_token_type(stream->current_token) == RIGHT_ROUND || next_token_type(stream->current_token)== LEFT_ROUND)
 		return NULL;	
- 	else error(1,0,"%d: Incorrect syntax.", stream->line_number);	
+ 	else{ printf("%s\n",stream->current_token); error(1,0,"%d: Incorrect syntax.", stream->line_number);}	
 	
 	if(next_token_type(stream->current_token) == LEFT_ANGLE)
 	{
@@ -329,7 +329,7 @@ command_t parse_simple_command(command_stream_t stream)
 	return c;
 } 
 
-	
+command_t parse_complete_subshell(command_stream_t stream);
 command_t parse_pipe_command(command_stream_t stream)
 {
 	command_t left = parse_simple_command(stream);
@@ -339,7 +339,7 @@ command_t parse_pipe_command(command_stream_t stream)
 	{
 		pipe = make_new_command(PIPE_COMMAND);
 		get_next_token(stream);
-		right = parse_simple_command(stream);
+		right = parse_complete_subshell(stream);
 		pipe->u.command[0] = left;
 		pipe->u.command[1] = right;
 		left = pipe;	
@@ -364,7 +364,7 @@ command_t parse_and_or_command(command_stream_t stream)
 			
 			if(next_token_type(stream->current_token) == NEWLINE) skip_newline(stream);
 			if(next_token_type(stream->current_token) == END_OF_FILE) error(1,0,"%d: Unexpected end of file after token \'&&\'", stream->line_number);
-			right = parse_pipe_command(stream);
+			right = parse_complete_subshell(stream);
 			and->u.command[0] = left;
 			and->u.command[1] = right;
 			left = and;
@@ -377,7 +377,7 @@ command_t parse_and_or_command(command_stream_t stream)
 
 			if(next_token_type(stream->current_token) == NEWLINE) skip_newline(stream);
                 	if(next_token_type(stream->current_token) == END_OF_FILE) error(1,0,"%d: Unexpected end of file after token \'||\'", stream->line_number);
-			right = parse_pipe_command(stream);
+			right = parse_complete_subshell(stream);
                 	or->u.command[0] = left;
                 	or->u.command[1] = right;
                 	left = or;
@@ -399,7 +399,7 @@ command_t parse_complete_command(command_stream_t stream)
 	{
 		command_t sequence = make_new_command(SEQUENCE_COMMAND);
 		get_next_token(stream);
-		right = parse_and_or_command(stream);
+		right = parse_complete_subshell(stream);
 		if(right != NULL) {
 		sequence->u.command[0] = left;
 		sequence->u.command[1] = right;
