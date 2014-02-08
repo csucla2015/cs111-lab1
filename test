@@ -1,2 +1,3 @@
-(ech) && (echo) || (echo) > word; (echo)|(echo);
-hi
+(echo left) && echo right;
+echo hi | wc -w
+

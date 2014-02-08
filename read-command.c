@@ -54,21 +54,33 @@ void get_next_token(command_stream_t stream)
 	next_char =  (*stream->get_next_byte)(stream->get_next_byte_argument);
   else next_char = stream->next_char;
 
+   while(next_char == ' ' || next_char == '\t')
+	{	
+		next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
+	}
+
+
+
+
 
 if(next_char == '#')
 {                                                                                                                
       while(next_char != '\n')
       	next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
+	
+      //while(next_char == '\n')
+	//next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
 
-next_char = (*stream->get_next_byte)(stream->get_next_byte_argument); // Skip to next char after comment newline
+//next_char = (*stream->get_next_byte)(stream->get_next_byte_argument); // Skip to next char after comment newline
 if(next_char == EOF) token[0] = EOF;
-                                                                                                                 
+token[0] = '\n';
+goto ret;                                                                                                              
 }                                                                                                                
 
-   while(next_char == ' ' || next_char == '\t')
-	{	
-		next_char = (*stream->get_next_byte)(stream->get_next_byte_argument);
-	}
+
+
+
+
 
     if(next_char == EOF)
     {
@@ -307,7 +319,7 @@ command_t parse_simple_command(command_stream_t stream)
 
         else if (next_token_type(stream->current_token) == RIGHT_ROUND || next_token_type(stream->current_token)== LEFT_ROUND)
 		return NULL;	
- 	else{ printf("%s\n",stream->current_token); error(1,0,"%d: Incorrect syntax.", stream->line_number);}	
+ 	else{error(1,0,"%d: Incorrect syntax.", stream->line_number);}	
 	
 	if(next_token_type(stream->current_token) == LEFT_ANGLE)
 	{
@@ -411,6 +423,7 @@ command_t parse_complete_command(command_stream_t stream)
 	{
 		command_t sequence = make_new_command(SEQUENCE_COMMAND);
 		get_next_token(stream);
+		if(next_token_type(stream->current_token) == NEWLINE) break;
 		right = parse_complete_subshell(stream);
 		if(right != NULL) {
 		sequence->u.command[0] = left;
@@ -561,6 +574,7 @@ command_t parse_complete_subshell(command_stream_t stream)
         {
                 command_t sequence = make_new_command(SEQUENCE_COMMAND);
                 get_next_token(stream);	
+		if(next_token_type(stream->current_token) == NEWLINE) break;
                 right = parse_and_or_subshell(stream);
                 if(right != NULL) {
                 sequence->u.command[0] = left;

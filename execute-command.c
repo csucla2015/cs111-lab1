@@ -52,7 +52,10 @@ void execute_simple_command(command_t command)
                 }
 
         else waitpid(pid,&command->status,0);
-
+	
+	if(command->status == -1)
+		command->status = 1;
+	else command->status = 0;
         
         
 
@@ -118,8 +121,11 @@ void execute_pipe_command(command_t command)
         else if(pid == -1)
                 error(1,0,"Error executing pipe command");
 
-        //waitpid(pid,NULL,0);
-
+        waitpid(pid,&command->status,0);
+	
+	if(command->status < 0) command->status = 1;
+	else command->status = 0;
+	
 
         
  }
@@ -168,7 +174,8 @@ void execute_wrapper(command_t command);
 void execute_sequence_command(command_t command)
 {
         execute_wrapper(command->u.command[0]);
-        execute_wrapper(command->u.command[1]);        
+        execute_wrapper(command->u.command[1]);
+	command->status = command->u.command[1]->status; 
 }
 
 

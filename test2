@@ -1,1 +1,1 @@
-a ||| b
+echo hello | wc -w
