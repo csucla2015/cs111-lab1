@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
 /* FIXME: You may need to add #include directives, macro definitions,
    static function definitions, etc.  */
 
@@ -94,38 +95,58 @@ void execute_and_or_command(command_t command)
 
 void execute_pipe_command(command_t command)
 {
-        int pipe_array[2];
-        
-        if(pipe(pipe_array) == -1)
-                error(1,0,"Error creating pipe");
 
-        pid_t pid = fork();
-        if(pid == 0)
+int pipe_array[2];
+pid_t pid1 , pid2;
+
+if(pipe(pipe_array) == -1) error(1, 0, "pipe creation failed");
+
+pid1 = fork();
+if(pid1 > 0)
+{
+        pid2 = fork();
+        if(pid2 >0 )
         {
-                dup2(pipe_array[1],1);
-                close(pipe_array[0]);        
-                //execvp(command->u.command[0]->u.word[0],command->u.command[0]->u.word);
-                execute_wrapper(command->u.command[0]);
+                close(pipe_array[0]);
+                close(pipe_array[1]);
+
+                pid_t temp = waitpid(-1,&command->status,0);
+                if(temp == pid1)
+                {
+                        waitpid(pid2,&command->status,0);
+                        return;
+                }
+
+                if(temp == pid2)
+                {
+                        waitpid(pid1,&command->status,0);
+                        return;
+                }
+
         }
 
-        else if(pid > 0){
-                
-                        dup2(pipe_array[0],0);
-                        close(pipe_array[1]);
-                        //execvp(command->u.command[1]->u.word[0],command->u.command[1]->u.word);
-                        execute_wrapper(command->u.command[1]);
-                
-                 //waitpid(pid,&command->u.command[1]->status,0);
-            }
 
-        else if(pid == -1)
-                error(1,0,"Error executing pipe command");
 
-        waitpid(pid,&command->status,0);
-	
-	if(command->status < 0) command->status = 1;
-	else command->status = 0;
-	
+        else if(pid2 == 0)
+        {
+
+        close(pipe_array[0]);
+        dup2(pipe_array[1],1);
+        execute_wrapper(command->u.command[0]);
+        exit(command->u.command[0]->status);
+        }
+
+}
+
+else if (pid1 == 0)
+{
+        close(pipe_array[1]);
+        dup2(pipe_array[0],0);
+        execute_wrapper(command->u.command[1]);
+        exit(command->u.command[1]->status);
+}
+
+else error(1,0,"Fork failure");
 
         
  }

@@ -1,0 +1,64 @@
+# 1
+      (
+       echo hello
+      ) \
+    ||
+      (
+       echo hi
+      ) \
+  &&
+    (
+     echo no
+    ) \
+  &&
+    (
+     echo hi
+    )
+# 2
+    (
+     echo one
+    ) \
+  |
+    wc -w
+# 3
+    echo two \
+  ||
+    (
+     echo three
+    )
+# 4
+    (
+     echo left
+    ) \
+  &&
+    echo right
+# 5
+  echo text to file>text
+# 6
+    echo one \
+  |
+    wc -w
+# 7
+  (
+     echo a \
+   ;
+     echo b \
+   ;
+     echo c \
+   ;
+     echo d
+  )
+# 8
+  (
+     echo show \
+   &&
+       echo show \
+     ||
+       echo hide
+  )
+# 9
+  echo hello>in.txt
+# 10
+  (
+   cat
+  )<in.txt
